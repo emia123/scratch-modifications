@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AllScratchMods</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for beautiful block and feature icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter & JetBrains Mono for code blocks -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Alpine.js for powerful reactive state management -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .scratch-orange { background-color: #FFAB19; }
+        .scratch-orange-text { color: #FFAB19; }
+        .scratch-blue { background-color: #4D97FF; }
+        .scratch-blue-border { border-color: #4D97FF; }
+        .scratch-purple { background-color: #9966FF; }
+        .scratch-green { background-color: #2CA5E2; }
+        .scratch-rose { background-color: #FC4F5F; }
+        
+        /* Custom scratch-like block styling */
+        .scratch-block {
+            position: relative;
+            box-shadow: 0 4px 0px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .scratch-block:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0px rgba(0,0,0,0.15);
+        }
+        /* Puzzle notch simulations */
+        .scratch-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 15px;
+            width: 15px;
+            height: 5px;
+            background: rgba(0,0,0,0.15);
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+        
+        /* Cube spinning custom animation for PenguinMod physics preview */
+        @keyframes spin {
+            from { transform: rotateX(0deg) rotateY(0deg); }
+            to { transform: rotateX(360deg) rotateY(360deg); }
+        }
+        .cube-container {
+            perspective: 400px;
+        }
+        .cube {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: spin 6s infinite linear;
+        }
+        .cube-face {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border: 2px solid white;
+            background: rgba(153, 102, 255, 0.7);
+        }
+        .cube-front  { transform: translateZ(40px); }
+        .cube-back   { transform: rotateY(180deg) translateZ(40px); }
+        .cube-right  { transform: rotateY(90deg) translateZ(40px); background: rgba(77, 151, 255, 0.7); }
+        .cube-left   { transform: rotateY(-90deg) translateZ(40px); background: rgba(77, 151, 255, 0.7); }
+        .cube-top    { transform: rotateX(90deg) translateZ(40px); background: rgba(255, 171, 25, 0.7); }
+        .cube-bottom { transform: rotateX(-90deg) translateZ(40px); background: rgba(255, 171, 25, 0.7); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800" x-data="scratchExplorer()">
+
+    <!-- NAVIGATION BAR -->
+    <header class="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 scratch-orange rounded-xl flex items-center justify-center text-white font-extrabold text-2xl shadow-md">
+                    S
+                </div>
+                <div>
+                    <span class="font-extrabold text-xl tracking-tight text-slate-900">Scratch<span class="text-indigo-600">Mods</span></span>
+                    <span class="text-xs block text-slate-500 font-medium">Explorer & Sandbox</span>
+                </div>
+            </div>
+
+            <!-- Tabs Desktop Navigation -->
+            <nav class="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl">
+                <button @click="activeTab = 'directory'" :class="activeTab === 'directory' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                    <i class="fa-solid fa-list-ul mr-1.5"></i> <span x-text="t[lang].navDirectory"></span>
+                </button>
+                <button @click="activeTab = 'compare'" :class="activeTab === 'compare' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                    <i class="fa-solid fa-scale-balanced mr-1.5"></i> <span x-text="t[lang].navCompare"></span>
+                </button>
+                <button @click="activeTab = 'wizard'" :class="activeTab === 'wizard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> <span x-text="t[lang].navWizard"></span>
+                </button>
+                <button @click="activeTab = 'sandbox'" :class="activeTab === 'sandbox' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                    <i class="fa-solid fa-cubes mr-1.5"></i> <span x-text="t[lang].navSandbox"></span>
+                </button>
+            </nav>
+
+            <!-- Language and Info -->
+            <div class="flex items-center space-x-2">
+                <!-- Language Selector Dropdown -->
+                <div class="relative">
+                    <button @click="langMenuOpen = !langMenuOpen" class="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-globe text-slate-500"></i>
+                        <span class="uppercase font-bold" x-text="lang"></span>
+                        <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                    </button>
+                    <div x-show="langMenuOpen" @click.outside="langMenuOpen = false" class="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50" x-transition>
+                        <button @click="lang = 'it'; langMenuOpen = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 font-medium text-slate-700 flex items-center justify-between">
+                            Italiano <span class="text-xs text-slate-400">IT</span>
+                        </button>
+                        <button @click="lang = 'en'; langMenuOpen = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 font-medium text-slate-700 flex items-center justify-between">
+                            English <span class="text-xs text-slate-400">EN</span>
+                        </button>
+                        <button @click="lang = 'es'; langMenuOpen = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 font-medium text-slate-700 flex items-center justify-between">
+                            Español <span class="text-xs text-slate-400">ES</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Tabs Navigation Drawer/Bar -->
+        <div class="md:hidden flex justify-around bg-slate-100 p-2 border-t border-slate-200">
+            <button @click="activeTab = 'directory'" class="flex flex-col items-center flex-1 py-1 text-xs font-semibold" :class="activeTab === 'directory' ? 'text-indigo-600' : 'text-slate-500'">
+                <i class="fa-solid fa-list-ul text-lg mb-0.5"></i>
+                <span x-text="t[lang].navDirectory"></span>
+            </button>
+            <button @click="activeTab = 'compare'" class="flex flex-col items-center flex-1 py-1 text-xs font-semibold" :class="activeTab === 'compare' ? 'text-indigo-600' : 'text-slate-500'">
+                <i class="fa-solid fa-scale-balanced text-lg mb-0.5"></i>
+                <span x-text="t[lang].navCompare"></span>
+            </button>
+            <button @click="activeTab = 'wizard'" class="flex flex-col items-center flex-1 py-1 text-xs font-semibold" :class="activeTab === 'wizard' ? 'text-indigo-600' : 'text-slate-500'">
+                <i class="fa-solid fa-wand-magic-sparkles text-lg mb-0.5"></i>
+                <span x-text="t[lang].navWizard"></span>
+            </button>
+            <button @click="activeTab = 'sandbox'" class="flex flex-col items-center flex-1 py-1 text-xs font-semibold" :class="activeTab === 'sandbox' ? 'text-indigo-600' : 'text-slate-500'">
+                <i class="fa-solid fa-cubes text-lg mb-0.5"></i>
+                <span x-text="t[lang].navSandbox"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- HERO SPLASH SECTION -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-12 px-4 sm:px-6 lg:px-8 text-center relative overflow-hidden shadow-inner">
+        <!-- Floating abstract blocks background design -->
+        <div class="absolute -top-10 -left-10 w-40 h-12 scratch-orange opacity-20 rotate-12 rounded-full blur-xl"></div>
+        <div class="absolute -bottom-10 right-10 w-48 h-16 scratch-blue opacity-30 -rotate-12 rounded-full blur-xl"></div>
+        <div class="absolute top-1/2 left-3/4 w-32 h-10 scratch-purple opacity-20 rotate-45 rounded-full blur-lg"></div>
+
+        <div class="max-w-4xl mx-auto relative z-10">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 mb-4 border border-indigo-500/30">
+                <i class="fa-solid fa-code-fork mr-1.5"></i> Esplora le Alternative a Scratch
+            </span>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight" x-text="t[lang].heroTitle"></h1>
+            <p class="mt-4 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto" x-text="t[lang].heroSub"></p>
+        </div>
+    </div>
+
+    <!-- MAIN BODY WRAPPER -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- DIRECTORY TAB -->
+        <div x-show="activeTab === 'directory'" x-transition:enter="transition ease-out duration-200" class="space-y-8">
+            <!-- Filter & Search Controls -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <!-- Search bar -->
+                <div class="relative w-full md:w-96">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                    </span>
+                    <input type="text" x-model="searchQuery" :placeholder="t[lang].searchPlaceholder" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all" />
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-wrap gap-2 w-full md:w-auto justify-start md:justify-end">
+                    <button @click="filterCategory = 'all'" :class="filterCategory === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-4 py-2 rounded-xl text-xs font-semibold transition-colors">
+                        <span x-text="t[lang].all"></span>
+                    </button>
+                    <button @click="filterCategory = 'performance'" :class="filterCategory === 'performance' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-4 py-2 rounded-xl text-xs font-semibold transition-colors">
+                        <i class="fa-solid fa-gauge-high mr-1"></i> <span x-text="t[lang].catPerformance"></span>
+                    </button>
+                    <button @click="filterCategory = 'advanced'" :class="filterCategory === 'advanced' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-4 py-2 rounded-xl text-xs font-semibold transition-colors">
+                        <i class="fa-solid fa-brain mr-1"></i> <span x-text="t[lang].catAdvanced"></span>
+                    </button>
+                    <button @click="filterCategory = 'multimedia'" :class="filterCategory === 'multimedia' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-4 py-2 rounded-xl text-xs font-semibold transition-colors">
+                        <i class="fa-solid fa-cube mr-1"></i> <span x-text="t[lang].catMultimedia"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid of Scratch Mods -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="mod in filteredMods()" :key="mod.id">
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col group">
+                        <!-- Top Accent Banner based on Category -->
+                        <div class="h-2.5" :class="{
+                            'bg-gradient-to-r from-emerald-400 to-teal-500': mod.category === 'performance',
+                            'bg-gradient-to-r from-blue-400 to-indigo-500': mod.category === 'advanced',
+                            'bg-gradient-to-r from-violet-400 to-fuchsia-500': mod.category === 'multimedia',
+                            'bg-gradient-to-r from-orange-400 to-pink-500': mod.category === 'niche'
+                        }"></div>
+                        
+                        <!-- Header Content -->
+                        <div class="p-6 flex-1 flex flex-col">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-sm" :style="`background-color: ${mod.brandColor}`" x-html="mod.logoIcon">
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors" x-text="mod.name"></h3>
+                                        <span class="text-xs text-slate-500 font-medium" x-text="mod.creator"></span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold px-2 py-1 rounded-md" :class="mod.status === 'Active' || mod.status === 'Preserved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'" x-text="mod.status"></span>
+                            </div>
+
+                            <!-- Description (Dynamic Language) -->
+                            <p class="text-sm text-slate-600 leading-relaxed mb-6 h-28 overflow-y-auto pr-1" x-text="mod.descriptions[lang]"></p>
+
+                            <!-- Features badges -->
+                            <div class="mt-auto space-y-4">
+                                <div class="flex flex-wrap gap-1.5">
+                                    <template x-for="feat in mod.keyFeatures[lang]">
+                                        <span class="text-xs font-medium px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg" x-text="feat"></span>
+                                    </template>
+                                </div>
+
+                                <!-- Key highlight detail block -->
+                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-500">
+                                    <span class="font-bold text-slate-700"><i class="fa-solid fa-star text-amber-500 mr-1"></i> Special:</span> 
+                                    <span x-text="mod.highlight[lang]"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Footer Links -->
+                        <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+                            <button @click="openCompareWith(mod.id)" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center">
+                                <i class="fa-solid fa-scale-balanced mr-1.5"></i> <span x-text="t[lang].compareLabel"></span>
+                            </button>
+                            <a :href="mod.website" target="_blank" class="text-xs font-bold text-slate-700 hover:text-indigo-600 inline-flex items-center bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5">
+                                Visit <i class="fa-solid fa-arrow-up-right-from-square ml-1.5 text-[10px]"></i>
+                            </a>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- COMPARE TAB -->
+        <div x-show="activeTab === 'compare'" x-transition:enter="transition ease-out duration-200" class="space-y-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-bold text-slate-900 mb-2" x-text="t[lang].compHeadline"></h2>
+                <p class="text-sm text-slate-500 mb-6" x-text="t[lang].compSub"></p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- Select Mod 1 -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider" x-text="t[lang].selectMod1"></label>
+                        <select x-model="comp1" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700">
+                            <template x-for="mod in mods" :key="mod.id">
+                                <option :value="mod.id" x-text="mod.name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Select Mod 2 -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider" x-text="t[lang].selectMod2"></label>
+                        <select x-model="comp2" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700">
+                            <template x-for="mod in mods" :key="mod.id">
+                                <option :value="mod.id" x-text="mod.name" :disabled="mod.id === comp1"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Matrix Table (Responsive wrapper) -->
+                <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                    <table class="w-full min-w-[600px] text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100">
+                                <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-1/4">Criteria</th>
+                                <th class="p-4 text-sm font-extrabold text-slate-900 w-3/8">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-2 h-2 rounded-full" :style="`background-color: ${getMod(comp1).brandColor}`"></div>
+                                        <span x-text="getMod(comp1).name"></span>
+                                    </div>
+                                </th>
+                                <th class="p-4 text-sm font-extrabold text-slate-900 w-3/8">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-2 h-2 rounded-full" :style="`background-color: ${getMod(comp2).brandColor}`"></div>
+                                        <span x-text="getMod(comp2).name"></span>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <!-- Target Audience -->
+                            <tr>
+                                <td class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Target</td>
+                                <td class="p-4 text-sm text-slate-700 font-semibold" x-text="getMod(comp1).target[lang]"></td>
+                                <td class="p-4 text-sm text-slate-700 font-semibold" x-text="getMod(comp2).target[lang]"></td>
+                            </tr>
+                            <!-- Core Strength -->
+                            <tr>
+                                <td class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Strength</td>
+                                <td class="p-4 text-sm text-slate-600" x-text="getMod(comp1).highlight[lang]"></td>
+                                <td class="p-4 text-sm text-slate-600" x-text="getMod(comp2).highlight[lang]"></td>
+                            </tr>
+                            <!-- JS Compilation -->
+                            <tr>
+                                <td class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">JS Compile / Export</td>
+                                <td class="p-4 text-sm">
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold" :class="getMod(comp1).exportJs ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">
+                                        <i class="fa-solid mr-1" :class="getMod(comp1).exportJs ? 'fa-circle-check' : 'fa-circle-xmark'"></i>
+                                        <span x-text="getMod(comp1).exportJs ? t[lang].yes : t[lang].no"></span>
+                                    </span>
+                                </td>
+                                <td class="p-4 text-sm">
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold" :class="getMod(comp2).exportJs ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">
+                                        <i class="fa-solid mr-1" :class="getMod(comp2).exportJs ? 'fa-circle-check' : 'fa-circle-xmark'"></i>
+                                        <span x-text="getMod(comp2).exportJs ? t[lang].yes : t[lang].no"></span>
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Web Requests -->
+                            <tr>
+                                <td class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Fetch API / Web Requests</td>
+                                <td class="p-4 text-sm">
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold" :class="getMod(comp1).webRequests ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">
+                                        <i class="fa-solid mr-1" :class="getMod(comp1).webRequests ? 'fa-circle-check' : 'fa-circle-xmark'"></i>
+                                        <span x-text="getMod(comp1).webRequests ? t[lang].yes : t[lang].no"></span>
+                                    </span>
+                                </td>
+                                <td class="p-4 text-sm">
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold" :class="getMod(comp2).webRequests ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">
+                                        <i class="fa-solid mr-1" :class="getMod(comp2).webRequests ? 'fa-circle-check' : 'fa-circle-xmark'"></i>
+                                        <span x-text="getMod(comp2).webRequests ? t[lang].yes : t[lang].no"></span>
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Hardware / Extension level -->
+                            <tr>
+                                <td class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Extensions Support</td>
+                                <td class="p-4 text-sm font-medium text-slate-700" x-text="getMod(comp1).extensions[lang]"></td>
+                                <td class="p-4 text-sm font-medium text-slate-700" x-text="getMod(comp2).extensions[lang]"></td>
+                            </tr>
+                            <!-- Speed Benchmark Category -->
+                            <tr>
+                                <td class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Performance Limit</td>
+                                <td class="p-4 text-sm">
+                                    <span class="font-bold text-slate-900" x-text="getMod(comp1).speedScore"></span>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+                                        <div class="bg-indigo-600 h-1.5 rounded-full" :style="`width: ${getMod(comp1).speedPercentage}%`"></div>
+                                    </div>
+                                </td>
+                                <td class="p-4 text-sm">
+                                    <span class="font-bold text-slate-900" x-text="getMod(comp2).speedScore"></span>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+                                        <div class="bg-indigo-600 h-1.5 rounded-full" :style="`width: ${getMod(comp2).speedPercentage}%`"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- WIZARD TAB -->
+        <div x-show="activeTab === 'wizard'" x-transition:enter="transition ease-out duration-200" class="max-w-2xl mx-auto space-y-6">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                <!-- Title & Progress -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <span class="text-xs font-bold text-indigo-600 tracking-wider uppercase" x-text="t[lang].finderLabel"></span>
+                        <h2 class="text-xl font-bold text-slate-900" x-text="t[lang].wizardHeader"></h2>
+                    </div>
+                    <span class="text-sm font-bold text-slate-400" x-text="`Step ${quizStep + 1} / 3`"></span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-100 h-1 rounded-full mb-8">
+                    <div class="bg-indigo-600 h-1 rounded-full transition-all duration-300" :style="`width: ${(quizStep + 1) * 33.3}%`"></div>
+                </div>
+
+                <!-- Quiz Questions -->
+                <div class="space-y-6">
+                    <!-- STEP 1: Main Goal -->
+                    <div x-show="quizStep === 0" class="space-y-4">
+                        <p class="font-bold text-slate-800 text-base" x-text="t[lang].quizQ1"></p>
+                        <div class="grid grid-cols-1 gap-3">
+                            <button @click="quizAnswers.goal = 'speed'; quizStep++" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all font-semibold flex items-center justify-between group">
+                                <span class="text-slate-700" x-text="t[lang].q1A1"></span>
+                                <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                            </button>
+                            <button @click="quizAnswers.goal = 'advanced'; quizStep++" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all font-semibold flex items-center justify-between group">
+                                <span class="text-slate-700" x-text="t[lang].q1A2"></span>
+                                <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                            </button>
+                            <button @click="quizAnswers.goal = 'media'; quizStep++" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all font-semibold flex items-center justify-between group">
+                                <span class="text-slate-700" x-text="t[lang].q1A3"></span>
+                                <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Programming Knowledge level -->
+                    <div x-show="quizStep === 1" class="space-y-4">
+                        <p class="font-bold text-slate-800 text-base" x-text="t[lang].quizQ2"></p>
+                        <div class="grid grid-cols-1 gap-3">
+                            <button @click="quizAnswers.level = 'standard'; quizStep++" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all font-semibold flex items-center justify-between group">
+                                <span class="text-slate-700" x-text="t[lang].q2A1"></span>
+                                <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                            </button>
+                            <button @click="quizAnswers.level = 'university'; quizStep++" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all font-semibold flex items-center justify-between group">
+                                <span class="text-slate-700" x-text="t[lang].q2A2"></span>
+                                <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Integration Need -->
+                    <div x-show="quizStep === 2" class="space-y-4">
+                        <p class="font-bold text-slate-800 text-base" x-text="t[lang].quizQ3"></p>
+                        <div class="grid grid-cols-1 gap-3">
+                            <button @click="quizAnswers.integration = 'easy'; calculateResult()" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all font-semibold flex items-center justify-between group">
+                                <span class="text-slate-700" x-text="t[lang].q3A1"></span>
+                                <i class="fa-solid fa-circle-check text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                            </button>
+                            <button @click="quizAnswers.integration = 'full'; calculateResult()" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all font-semibold flex items-center justify-between group">
+                                <span class="text-slate-700" x-text="t[lang].q3A2"></span>
+                                <i class="fa-solid fa-circle-check text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: RECOMMENDATION RESULT -->
+                    <div x-show="quizStep === 3" class="space-y-6 text-center">
+                        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner mb-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <h3 class="text-2xl font-extrabold text-slate-900" x-text="t[lang].quizResultHeader"></h3>
+                        <p class="text-sm text-slate-500" x-text="t[lang].quizResultSub"></p>
+
+                        <!-- Recommended Mod Card -->
+                        <template x-if="recommendedMod">
+                            <div class="bg-indigo-50/40 rounded-2xl p-6 border border-indigo-100 text-left max-w-md mx-auto relative overflow-hidden">
+                                <div class="absolute -top-6 -right-6 w-24 h-24 bg-indigo-100/30 rounded-full"></div>
+                                <div class="flex items-center space-x-3 mb-4 relative z-10">
+                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" :style="`background-color: ${recommendedMod.brandColor}`" x-html="recommendedMod.logoIcon"></div>
+                                    <div>
+                                        <h4 class="font-extrabold text-lg text-slate-900" x-text="recommendedMod.name"></h4>
+                                        <span class="text-xs text-indigo-600 font-bold" x-text="recommendedMod.creator"></span>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-600 leading-relaxed mb-4" x-text="recommendedMod.descriptions[lang]"></p>
+                                <div class="flex items-center justify-between">
+                                    <a :href="recommendedMod.website" target="_blank" class="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl shadow-sm transition-colors flex items-center">
+                                        Launch Mod <i class="fa-solid fa-arrow-up-right-from-square ml-1.5 text-[9px]"></i>
+                                    </a>
+                                    <button @click="resetQuiz()" class="text-xs font-bold text-slate-400 hover:text-slate-600">
+                                        <i class="fa-solid fa-rotate-left mr-1"></i> <span x-text="t[lang].tryAgain"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Footer Back Navigation Buttons for Quiz -->
+                <div class="mt-8 pt-4 border-t border-slate-100 flex justify-between text-xs" x-show="quizStep > 0 && quizStep < 3">
+                    <button @click="quizStep--" class="text-slate-500 hover:text-slate-800 font-semibold flex items-center">
+                        <i class="fa-solid fa-chevron-left mr-1"></i> Back
+                    </button>
+                    <button @click="resetQuiz()" class="text-rose-500 hover:text-rose-600 font-semibold flex items-center">
+                        <i class="fa-solid fa-xmark mr-1"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SANDBOX PLAYGROUND TAB -->
+        <div x-show="activeTab === 'sandbox'" x-transition:enter="transition ease-out duration-200" class="space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                
+                <!-- Left Column: Block Selection Tray -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-5 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-bold text-slate-900" x-text="t[lang].sandboxHeadline"></h2>
+                            <span class="text-xs font-bold text-indigo-600 uppercase bg-indigo-50 px-2 py-1 rounded" x-text="t[lang].interactive">Interactive</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-6" x-text="t[lang].sandboxSub"></p>
+
+                        <!-- Selected Mod Blocks Toggle -->
+                        <div class="mb-6">
+                            <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Select Mod Engine</label>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <button @click="sandboxMod = 'turbowarp'" :class="sandboxMod === 'turbowarp' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'" class="px-1.5 py-2 rounded-xl text-[11px] font-bold border transition-all text-center">
+                                    TurboWarp
+                                </button>
+                                <button @click="sandboxMod = 'snap'" :class="sandboxMod === 'snap' ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'" class="px-1.5 py-2 rounded-xl text-[11px] font-bold border transition-all text-center">
+                                    Snap!
+                                </button>
+                                <button @click="sandboxMod = 'penguinmod'" :class="sandboxMod === 'penguinmod' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'" class="px-1.5 py-2 rounded-xl text-[11px] font-bold border transition-all text-center">
+                                    PenguinMod
+                                </button>
+                                <button @click="sandboxMod = 'miciocode'" :class="sandboxMod === 'miciocode' ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'" class="px-1.5 py-2 rounded-xl text-[11px] font-bold border transition-all text-center">
+                                    MicioCode
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Available Blocks Container -->
+                        <div class="space-y-4">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block" x-text="t[lang].clickToInsert"></span>
+                            
+                            <!-- TurboWarp blocks tray -->
+                            <div x-show="sandboxMod === 'turbowarp'" class="space-y-3" x-transition>
+                                <div @click="addSandboxBlock('compiler_active')" class="scratch-block scratch-orange p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-amber-600/50 px-1.5 py-0.5 rounded text-[10px] mr-1">Compiler</span> is compiled?</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                                <div @click="addSandboxBlock('limit_remover')" class="scratch-block scratch-orange p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-amber-600/50 px-1.5 py-0.5 rounded text-[10px] mr-1">Limits</span> disable cloning limit</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                                <div @click="addSandboxBlock('custom_fps')" class="scratch-block scratch-orange p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-amber-600/50 px-1.5 py-0.5 rounded text-[10px] mr-1">Graphics</span> set framerate to [60] FPS</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                            </div>
+
+                            <!-- Snap! blocks tray -->
+                            <div x-show="sandboxMod === 'snap'" class="space-y-3" x-transition>
+                                <div @click="addSandboxBlock('snap_map')" class="scratch-block scratch-blue p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-blue-600/50 px-1.5 py-0.5 rounded text-[10px] mr-1">Lists</span> map [double] over list (1, 2, 3)</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                                <div @click="addSandboxBlock('snap_lambdas')" class="scratch-block scratch-blue p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-blue-600/50 px-1.5 py-0.5 rounded text-[10px] mr-1">JS</span> run JS code: console.log()</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                            </div>
+
+                            <!-- PenguinMod blocks tray -->
+                            <div x-show="sandboxMod === 'penguinmod'" class="space-y-3" x-transition>
+                                <div @click="addSandboxBlock('penguin_3d')" class="scratch-block scratch-purple p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-purple-600/50 px-1.5 py-0.5 rounded text-[10px] mr-1">3D</span> create 3D Cube [size 10]</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                                <div @click="addSandboxBlock('penguin_fetch')" class="scratch-block scratch-purple p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-purple-600/50 px-1.5 py-0.5 rounded text-[10px] mr-1">Fetch</span> GET request to [API URL]</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                            </div>
+
+                            <!-- MicioCode blocks tray -->
+                            <div x-show="sandboxMod === 'miciocode'" class="space-y-3" x-transition>
+                                <div @click="addSandboxBlock('miciocode_banner')" class="scratch-block scratch-rose p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-rose-700/50 px-1.5 py-0.5 rounded text-[10px] mr-1">Banner</span> set custom project banner to [Cat Theme]</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                                <div @click="addSandboxBlock('miciocode_ai')" class="scratch-block scratch-rose p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                    <span><span class="bg-rose-700/50 px-1.5 py-0.5 rounded text-[10px] mr-1">AI</span> generate block-code from prompt [cat jump script]</span>
+                                    <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Selection changes visual behaviors of the compilation output.
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Sandbox Workspace & Live Preview -->
+                <div class="lg:col-span-7 flex flex-col gap-6">
+                    <!-- Scripting workspace -->
+                    <div class="bg-slate-900 rounded-2xl p-6 text-white flex-1 flex flex-col justify-between shadow-lg relative min-h-[250px]">
+                        <!-- Title header -->
+                        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                            <span class="text-xs font-bold text-slate-400 flex items-center"><i class="fa-solid fa-square-caret-right mr-1.5 text-emerald-500"></i> Workspace Code Simulator</span>
+                            <button @click="clearSandbox()" class="text-slate-500 hover:text-rose-400 font-semibold text-xs flex items-center transition-colors">
+                                <i class="fa-solid fa-trash-can mr-1"></i> <span x-text="t[lang].clear"></span>
+                            </button>
+                        </div>
+
+                        <!-- Active block builder workspace lists -->
+                        <div class="flex-1 flex flex-col gap-3 py-2">
+                            <!-- Show instructions when workspace is empty -->
+                            <template x-if="sandboxScript.length === 0">
+                                <div class="flex flex-col items-center justify-center text-center h-full py-12 text-slate-500 space-y-3">
+                                    <i class="fa-solid fa-arrow-left text-3xl opacity-35 animate-pulse"></i>
+                                    <p class="text-xs font-semibold" x-text="t[lang].workspaceEmpty"></p>
+                                </div>
+                            </template>
+
+                            <template x-for="(block, index) in sandboxScript" :key="index">
+                                <div class="scratch-block p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none border-l-4 group" :class="{
+                                    'scratch-orange border-amber-500': block.category === 'turbowarp',
+                                    'scratch-blue border-blue-600': block.category === 'snap',
+                                    'scratch-purple border-purple-600': block.category === 'penguinmod',
+                                    'scratch-rose border-rose-600': block.category === 'miciocode'
+                                }">
+                                    <span x-text="block.text"></span>
+                                    <button @click="removeSandboxBlock(index)" class="text-white/60 hover:text-white group-hover:opacity-100 transition-opacity">
+                                        <i class="fa-solid fa-xmark text-sm"></i>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Execute Workspace Trigger Button -->
+                        <div class="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
+                            <div class="flex space-x-2">
+                                <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            </div>
+                            <button @click="runSandboxScript()" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-sm rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-play"></i> <span x-text="t[lang].execute"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live visual outputs screen simulation -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-4" x-text="t[lang].outputScreen"></span>
+                            
+                            <!-- Screen simulation container (Dynamic based on selected block states) -->
+                            <div class="bg-slate-950 rounded-xl h-44 flex items-center justify-center border border-slate-900 relative overflow-hidden">
+                                
+                                <!-- DEFAULT: Static background grid -->
+                                <div class="absolute inset-0 opacity-10 flex flex-wrap gap-2 pointer-events-none p-1">
+                                    <template x-for="n in 100">
+                                        <div class="w-8 h-8 border border-white/20"></div>
+                                    </template>
+                                </div>
+
+                                <!-- STATE: Empty compilation target -->
+                                <div x-show="!sandboxExecuted" class="text-center text-slate-500 z-10 space-y-2">
+                                    <i class="fa-solid fa-tv text-3xl opacity-40"></i>
+                                    <p class="text-[11px]" x-text="t[lang].outputAwait"></p>
+                                </div>
+
+                                <!-- STATE: Compiled Outputs visualization elements -->
+                                <div x-show="sandboxExecuted" class="z-10 text-center text-white p-4 w-full h-full flex flex-col justify-between" x-transition>
+                                    
+                                    <!-- Log Stream details -->
+                                    <div class="text-left font-mono text-[10px] text-emerald-400 space-y-1 overflow-y-auto max-h-24">
+                                        <p>&gt; initializing scratch block-engine translation...</p>
+                                        <template x-for="log in consoleLogs">
+                                            <p x-text="log" class="text-slate-300"></p>
+                                        </template>
+                                        <p class="text-emerald-300">&gt; process finished successfully.</p>
+                                    </div>
+
+                                    <!-- Graphic 3D interactive rotation simulator (Triggered when 3D mod is used) -->
+                                    <div x-show="has3D" class="absolute right-8 top-12 cube-container" x-transition>
+                                        <div class="cube">
+                                            <div class="cube-face cube-front"></div>
+                                            <div class="cube-face cube-back"></div>
+                                            <div class="cube-face cube-right"></div>
+                                            <div class="cube-face cube-left"></div>
+                                            <div class="cube-face cube-top"></div>
+                                            <div class="cube-face cube-bottom"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Custom FPS tag representation -->
+                                    <div x-show="customFPS" class="absolute bottom-3 right-4 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold">
+                                        <span x-text="customFPSVal"></span> FPS
+                                    </div>
+
+                                    <!-- Compiled banner element -->
+                                    <div x-show="isCompiled" class="absolute top-3 right-4 bg-amber-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded shadow">
+                                        COMPILED MODE ACTIVE
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 mt-20 py-8 px-4 sm:px-6 lg:px-8 text-center text-slate-400 text-xs">
+        <div class="max-w-7xl mx-auto space-y-4">
+            <div class="flex items-center justify-center space-x-2">
+                <span class="font-bold text-slate-700">Scratch Mods Explorer</span>
+                <span>•</span>
+                <span>An educational guide to community-led block compilers & extensions.</span>
+            </div>
+            <p>This web application is not affiliated with Scratch, MIT Media Lab, or any official Scratch foundation.</p>
+            <p>© 2026 Scratch Mods Explorer. Created with ❤️ for students, educators, and makers.</p>
+        </div>
+    </footer>
+
+    <script>
+        function scratchExplorer() {
+            return {
+                lang: 'it',
+                langMenuOpen: false,
+                activeTab: 'directory',
+                searchQuery: '',
+                filterCategory: 'all',
+                
+                // Compare state variables
+                comp1: 'turbowarp',
+                comp2: 'miciocode',
+
+                // Sandbox play state variables
+                sandboxMod: 'miciocode',
+                sandboxScript: [],
+                sandboxExecuted: false,
+                consoleLogs: [],
+                has3D: false,
+                customFPS: false,
+                customFPSVal: 30,
+                isCompiled: false,
+
+                // Quiz state variables
+                quizStep: 0,
+                quizAnswers: {
+                    goal: '',
+                    level: '',
+                    integration: ''
+                },
+                recommendedMod: null,
+
+                // Multi language localization mapping
+                t: {
+                    it: {
+                        navDirectory: "Lista dei Mod",
+                        navCompare: "Confronta",
+                        navWizard: "Mod Consigliato",
+                        navSandbox: "Simulatore di Blocchi",
+                        heroTitle: "L'Universo delle Scratch Mod",
+                        heroSub: "Esplora le modifiche e i compilatori creati dalla community per superare ogni limite di velocità, grafica e calcolo di Scratch.",
+                        searchPlaceholder: "Cerca una modifica Scratch...",
+                        all: "Tutte",
+                        catPerformance: "Velocità",
+                        catAdvanced: "Avanzate",
+                        catMultimedia: "AI, 3D & Multimedia",
+                        compareLabel: "Confronta con un altro Mod",
+                        yes: "Sì",
+                        no: "No",
+                        compHeadline: "Confronto Tecnico dei Mod",
+                        compSub: "Seleziona due Scratch mod per comprendere istantaneamente le loro differenze di prestazioni, esportazione e capacità logiche.",
+                        selectMod1: "Seleziona prima Modifica:",
+                        selectMod2: "Seleziona seconda Modifica:",
+                        finderLabel: "GUIDA ALLA SCELTA",
+                        wizardHeader: "Quale Scratch Mod fa per te?",
+                        quizQ1: "Cosa vuoi fare principalmente con Scratch?",
+                        q1A1: "Far girare i miei progetti attuali molto più velocemente.",
+                        q1A2: "Imparare concetti avanzati di programmazione e informatica accademica.",
+                        q1A3: "Integrare IA, grafica 3D o connettermi ad API esterne.",
+                        quizQ2: "Qual è il tuo livello di esperienza?",
+                        q2A1: "Ho una buona conoscenza di Scratch e preferisco i blocchi standard o l'IA.",
+                        q2A2: "Voglio usare liste annidate e strutture di programmazione avanzate.",
+                        quizQ3: "Hai bisogno di esportare il progetto altrove?",
+                        q3A1: "No, mi basta usarlo all'interno del browser o desktop.",
+                        q3A2: "Sì, desidero esportare il codice direttamente in JavaScript o come app autonoma.",
+                        quizResultHeader: "La tua Modifica Scratch Ideale!",
+                        quizResultSub: "In base alle tue risposte, ecco l'ambiente migliore per sviluppare il tuo prossimo progetto:",
+                        tryAgain: "Ricomincia il test",
+                        sandboxHeadline: "Libreria Blocchi Speciali",
+                        sandboxSub: "Usa i blocchi speciali di TurboWarp, Snap!, PenguinMod o MicioCode nel simulatore a destra per provarne il funzionamento.",
+                        clickToInsert: "Clicca su un blocco per aggiungerlo:",
+                        workspaceEmpty: "Il tuo spazio di lavoro è vuoto! Clicca sui blocchi a sinistra per aggiungerli alla sequenza di esecuzione.",
+                        clear: "Pulisci",
+                        execute: "Esegui Script",
+                        outputScreen: "Schermo di Output Simulato",
+                        outputAwait: "Fai clic su 'Esegui Script' per osservare l'effetto visivo e i log del codice nel simulatore.",
+                        customBlockAdded: "Blocco inserito nello spazio di lavoro!"
+                    },
+                    en: {
+                        navDirectory: "Directory",
+                        navCompare: "Compare Matrix",
+                        navWizard: "Mod Finder",
+                        navSandbox: "Block Simulator",
+                        heroTitle: "The Scratch Mod Universe",
+                        heroSub: "Explore the community-built Scratch alternatives to expand your performance boundaries, custom extensions, and advanced coding styles.",
+                        searchPlaceholder: "Search for a Scratch modification...",
+                        all: "All",
+                        catPerformance: "High Speed",
+                        catAdvanced: "Advanced CS",
+                        catMultimedia: "AI, 3D & Multimedia",
+                        compareLabel: "Compare with another Mod",
+                        yes: "Yes",
+                        no: "No",
+                        compHeadline: "Technical Comparison Matrix",
+                        compSub: "Choose two individual modifications and compare features side-by-side to find your favorite framework.",
+                        selectMod1: "Select First Modification:",
+                        selectMod2: "Select Second Modification:",
+                        finderLabel: "RECOMMENDATION WIZARD",
+                        wizardHeader: "Which Mod Suits You Best?",
+                        quizQ1: "What is your primary goal with Scratch?",
+                        q1A1: "I just want to run my current heavy projects much faster.",
+                        q1A2: "I want to explore advanced first-class academic CS concepts.",
+                        q1A3: "I want to utilize AI, 3D capabilities or connect to external APIs.",
+                        quizQ2: "What is your programming experience?",
+                        q2A1: "I am familiar with standard Scratch drag-and-drop or AI blocks.",
+                        q2A2: "I am ready for high-level lists of lists and customizable structures.",
+                        quizQ3: "Do you need to pack or export your work?",
+                        q3A1: "No, simple execution inside my local browser or desktop is perfect.",
+                        q3A2: "Yes, I want to compile to native JavaScript or export an .exe/app package.",
+                        quizResultHeader: "Your Recommended Scratch Mod!",
+                        quizResultSub: "According to your answers, we recommend this unique Scratch modification for you:",
+                        tryAgain: "Restart Quiz",
+                        sandboxHeadline: "Custom Blocks Library",
+                        sandboxSub: "Select unique blocks from TurboWarp, Snap!, PenguinMod, or MicioCode and compose scripts to trigger simulated runtime results.",
+                        clickToInsert: "Click on any block to insert:",
+                        workspaceEmpty: "Your workspace is empty! Click the blocks on the left to add them to your script flow.",
+                        clear: "Clear Workspace",
+                        execute: "Run Simulated Script",
+                        outputScreen: "Simulated Web Screen Output",
+                        outputAwait: "Assemble some blocks and click 'Run Simulated Script' to view live results.",
+                        customBlockAdded: "Block successfully added to workspace!"
+                    },
+                    es: {
+                        navDirectory: "Directorio de Mods",
+                        navCompare: "Comparativa",
+                        navWizard: "Buscador de Mods",
+                        navSandbox: "Simulador de Bloques",
+                        heroTitle: "El Universo de Scratch Mods",
+                        heroSub: "Explora las modificaciones y compiladores creados por la comunidad para romper todos los límites de rendimiento, 3D y APIs.",
+                        searchPlaceholder: "Buscar una modificación de Scratch...",
+                        all: "Todos",
+                        catPerformance: "Rendimiento",
+                        catAdvanced: "CS Avanzado",
+                        catMultimedia: "IA, 3D & Multimedia",
+                        compareLabel: "Comparar con otro Mod",
+                        yes: "Sí",
+                        no: "No",
+                        compHeadline: "Comparación Técnica de Mods",
+                        compSub: "Selecciona dos Scratch mods para comprender instantáneamente sus diferencias en rendimiento, exportación y capacidades.",
+                        selectMod1: "Seleccionar primer Mod:",
+                        selectMod2: "Seleccionar segundo Mod:",
+                        finderLabel: "ASISTENTE DE BÚSQUEDA",
+                        wizardHeader: "¿Qué Modificación es para ti?",
+                        quizQ1: "¿Cuál es tu objetivo principal?",
+                        q1A1: "Solo quiero que mis proyectos pesados de Scratch carguen súper rápido.",
+                        q1A2: "Quiero aprender programación académica compleja o lógica avanzada.",
+                        q1A3: "Quiero integrar IA, elementos 3D o conectarme a servidores Web API.",
+                        quizQ2: "¿Cuál es tu nivel de experiencia?",
+                        q2A1: "Cómodo con bloques estándar de Scratch o herramientas de IA.",
+                        q2A2: "Listo para manipular listas de listas o bloques de funciones avanzados.",
+                        quizQ3: "¿Tienes la intención de empaquetar tus proyectos?",
+                        q3A1: "No, solo quiero jugarlo directamente dentro del navegador.",
+                        q3A2: "Sí, quiero empaquetar mis juegos a código JavaScript real o ejecutables.",
+                        quizResultHeader: "¡Tu Scratch Mod Ideal!",
+                        quizResultSub: "De acuerdo con tus respuestas, te sugerimos probar el siguiente entorno:",
+                        tryAgain: "Volver a jugar",
+                        sandboxHeadline: "Biblioteca de Bloques Únicos",
+                        sandboxSub: "Experimenta agregando bloques exclusivos de TurboWarp, Snap!, PenguinMod o MicioCode para ver simulaciones en vivo.",
+                        clickToInsert: "Haz clic para insertar:",
+                        workspaceEmpty: "¡Tu espacio de trabajo está vacío! Haz clic en los bloques de la izquierda para comenzar.",
+                        clear: "Limpiar",
+                        execute: "Ejecutar Script",
+                        outputScreen: "Pantalla de Salida Simulada",
+                        outputAwait: "Agrega bloques y haz clic en 'Ejecutar Script' para ver la simulación en tiempo real.",
+                        customBlockAdded: "¡Bloque agregado al espacio!"
+                    }
+                },
+
+                // Complete list of Scratch Mods details
+                mods: [
+                    {
+                        id: "turbowarp",
+                        name: "TurboWarp",
+                        creator: "GarboMuffin",
+                        status: "Active",
+                        category: "performance",
+                        brandColor: "#FFAB19",
+                        logoIcon: '<i class="fa-solid fa-bolt"></i>',
+                        website: "https://turbowarp.org",
+                        exportJs: true,
+                        webRequests: false,
+                        speedScore: "Over 20x Speed Increase",
+                        speedPercentage: 98,
+                        descriptions: {
+                            it: "Un compilatore Scratch ad alte prestazioni che esegue gli script con estrema velocità. Offre la rimozione dei limiti dei cloni, il supporto per frame rate personalizzati (60+ FPS) e un pacchettizzatore per esportare i progetti in HTML5 o come applicazioni desktop autonome.",
+                            en: "A high-performance Scratch compiler that runs projects extremely fast. Removes clonings limits, unlocks custom framerates (60+ FPS), and packages scripts into stand-alone apps.",
+                            es: "Un compilador de Scratch de alto rendimiento que ejecuta proyectos a gran velocidad. Remueve límites de clones, admite frecuencias de cuadro personalizadas y empaqueta juegos a ejecutables."
+                        },
+                        keyFeatures: {
+                            it: ["Compilatore JS", "60 FPS", "Nessun limite di cloni", "Modalità Scura"],
+                            en: ["JS Compiler", "60 FPS Support", "Clone Limit Removal", "Dark Mode Theme"],
+                            es: ["Compilador JS", "Soporte 60 FPS", "Sin límite de clones", "Tema Oscuro"]
+                        },
+                        highlight: {
+                            it: "Velocità di calcolo eccezionale grazie alla compilazione diretta dei blocchi in JavaScript.",
+                            en: "Extreme processing speeds achieved by converting Scratch blocks into JavaScript during runtime.",
+                            es: "Velocidad de procesamiento extrema al convertir bloques de Scratch directamente en JS."
+                        },
+                        target: {
+                            it: "Sviluppatori di giochi complessi o progetti pesanti che richiedono alta fluidità.",
+                            en: "Game developers with large projects requiring flawless frame rates.",
+                            es: "Creadores de juegos exigentes que necesitan optimización fluida y alta velocidad."
+                        },
+                        extensions: {
+                            it: "Estensioni avanzate selezionate, controller gamepad, file system locale.",
+                            en: "Curated list of utility extensions, local files access, and gamepad integration.",
+                            es: "Estensiones curadas, lectura de archivos locales y compatibilidad con mandos."
+                        }
+                    },
+                    {
+                        id: "snap",
+                        name: "Snap!",
+                        creator: "UC Berkeley & Jens Mönig",
+                        status: "Active",
+                        category: "advanced",
+                        brandColor: "#4D97FF",
+                        logoIcon: '<i class="fa-solid fa-shapes"></i>',
+                        website: "https://snap.berkeley.edu",
+                        exportJs: true,
+                        webRequests: true,
+                        speedScore: "Standard Interpreter with Custom Optimizations",
+                        speedPercentage: 60,
+                        descriptions: {
+                            it: "Sviluppato attivamente dall'Università di Berkeley per l'apprendimento accademico dell'informatica. Introduce la programmazione ad oggetti avanzata, liste ricorsive e recentemente ha integrato le funzioni 3D di BeetleBlocks come estensione nativa.",
+                            en: "Developed actively by UC Berkeley for advanced Computer Science. Features first-class blocks, nested sprites, custom lists of lists, and has recently integrated BeetleBlocks 3D features as a native library.",
+                            es: "Creado activamente por UC Berkeley para ciencias de la computación avanzadas. Ofrece bloques de primera clase, listas recursivas y ha integrado recientemente las funciones 3D de BeetleBlocks."
+                        },
+                        keyFeatures: {
+                            it: ["Linguaggio Accademico", "Funzioni come dati", "Estensione 3D Beetle", "Clonazione ad albero"],
+                            en: ["Academic Focus", "First-class Blocks", "3D Beetle Extension", "Tree Cloning"],
+                            es: ["Educación Avanzada", "Bloques primera clase", "Extensión 3D Beetle", "Herencia de Clones"]
+                        },
+                        highlight: {
+                            it: "Estremamente attivo e supportato da Berkeley. Permette di creare veri e propri linguaggi grafici personalizzati.",
+                            en: "Highly active and backed by Berkeley. Allows nesting blocks dynamically, treating scripts just like general variables.",
+                            es: "Muy activo y respaldado por Berkeley. Permite tratar scripts enteros como variables o enviarlos como parámetros."
+                        },
+                        target: {
+                            it: "Studenti universitari e programmatori interessati all'architettura software complessa.",
+                            en: "High school & college CS students targeting advanced logic paradigms.",
+                            es: "Estudiantes universitarios y diseñadores de lógica algorítmica compleja."
+                        },
+                        extensions: {
+                            it: "Estensioni illimitate, inclusa l'estensione 3D nativa ereditata da BeetleBlocks.",
+                            en: "Infinite extensibility, including the native 3D Beetle library inherited from BeetleBlocks.",
+                            es: "Ampliación infinita, incluyendo la librería 3D Beetle heredada de BeetleBlocks."
+                        }
+                    },
+                    {
+                        id: "miciocode",
+                        name: "MicioCode",
+                        creator: "MicioFoundation",
+                        status: "Active",
+                        category: "multimedia",
+                        brandColor: "#FC4F5F",
+                        logoIcon: '<i class="fa-solid fa-cat text-white text-2xl"></i>',
+                        website: "https://miciocode.my.canva.site/",
+                        exportJs: false,
+                        webRequests: true,
+                        speedScore: "AI Synthesized blocks with optimized browser performance",
+                        speedPercentage: 75,
+                        descriptions: {
+                            it: "Un innovativo e freschissimo Scratch mod potenziato dall'Intelligenza Artificiale creato da MicioFoundation nel 2026. Consente di aggiungere spettacolari banner grafici personalizzati nelle pagine dei progetti, offre fantastici blocchi avanzati per la manipolazione di stringhe, un'interfaccia Blockly avanzata e assistenti IA nativi per aiutarti a codificare.",
+                            en: "A highly innovative, AI-powered Scratch mod created by MicioFoundation in 2026. It introduces spectacular custom graphics banners for project pages, advanced string manipulation blocks, an optimized Blockly layout, and native AI assistants to help you write code on the fly.",
+                            es: "Una modificación innovadora de Scratch impulsada por Inteligencia Artificial creada por MicioFoundation en 2026. Introduce banners gráficos personalizados para páginas de proyectos, bloques avanzados de cadenas de texto, diseño Blockly optimizado y asistentes de IA integrados para ayudarte a programar."
+                        },
+                        keyFeatures: {
+                            it: ["IA Nativi", "Banner Progetti", "Blocchi Stringhe", "Blockly Ottimizzato"],
+                            en: ["Native AI Agents", "Project Banners", "String Blocks", "Optimized Blockly"],
+                            es: ["IA Nativos", "Banners de Proyectos", "Bloques de Texto", "Blockly Optimizado"]
+                        },
+                        highlight: {
+                            it: "Generatore di blocchi IA integrato ed editor grafico del profilo di progetto.",
+                            en: "Built-in AI block synthesizer and custom project profile customization options.",
+                            es: "Sintetizador de bloques por IA y opciones de personalización de perfil de proyectos."
+                        },
+                        target: {
+                            it: "Giovani creatori e programmatori moderni che vogliono sperimentare con l'IA e il branding.",
+                            en: "Young creators and modern programmers experimenting with AI generation and branding.",
+                            es: "Jóvenes creadores y programadores modernos que experimentan con generación IA y branding."
+                        },
+                        extensions: {
+                            it: "Assistente intelligente MicioAI, strumenti di sostituzione stringhe avanzati, gestore di banner.",
+                            en: "MicioAI smart coding assistant, advanced string replace tools, banner customized manager.",
+                            es: "Asistente MicioAI, herramientas avanzadas de reemplazo de texto, gestor de banners."
+                        }
+                    },
+                    {
+                        id: "penguinmod",
+                        name: "PenguinMod",
+                        creator: "FreshPenguin112",
+                        status: "Active",
+                        category: "multimedia",
+                        brandColor: "#9966FF",
+                        logoIcon: '<svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2c-3.86 0-7 3.14-7 7 0 1.93.78 3.68 2.05 4.95-.55.75-.92 1.63-1.02 2.6-.96.22-1.68 1.07-1.68 2.1 0 1.19.97 2.16 2.16 2.16h11c1.19 0 2.16-.97 2.16-2.16 0-1.03-.72-1.88-1.68-2.1-.1-.97-.47-1.85-1.02-2.6C18.22 12.68 19 10.93 19 9c0-3.86-3.14-7-7-7zm0 1.5c3.04 0 5.5 2.46 5.5 5.5 0 1.52-.62 2.9-1.61 3.9-.3-.54-.72-1.01-1.24-1.37.53-.59.85-1.37.85-2.23 0-1.79-1.46-3.25-3.25-3.25s-3.25 1.46-3.25 3.25c0 .86.32 1.64.85 2.23-.52.36-.94.83-1.24 1.37-.99-1-1.61-2.38-1.61-3.9 0-3.04 2.46-5.5 5.5-5.5z"/></svg>',
+                        website: "https://penguinmod.com",
+                        exportJs: true,
+                        webRequests: true,
+                        speedScore: "Hybrid compiler with heavy multi-core boosts",
+                        speedPercentage: 85,
+                        descriptions: {
+                            it: "La mod più completa per chi vuole connettere Scratch al web reale. Offre blocchi per inviare richieste API (Fetch), creare modelli 3D avanzati, abilitare motori fisici completi e programmare con il gamepad.",
+                            en: "A massive, feature-rich Scratch mod built for internet connectivity. Supports native Fetch requests to web APIs, full 3D rendering environments, and robust physics simulation blocks.",
+                            es: "Un mod masivo enfocado en conectividad web y multimedia. Integra peticiones Fetch API de internet, renderizado 3D y simulaciones de físicas avanzadas con gravedad."
+                        },
+                        keyFeatures: {
+                            it: ["Motore 3D", "Richieste Fetch", "Motore Fisico", "Multipiattaforma"],
+                            en: ["3D Physics Graphics", "HTTP API Fetching", "Ragdoll Physics Engine", "Cross-Platform"],
+                            es: ["Gráficos 3D", "Peticiones Web (Fetch)", "Motor de Físicas", "Multiplataforma"]
+                        },
+                        highlight: {
+                            it: "Sblocco totale della comunicazione HTTP con qualsiasi API pubblica sul web.",
+                            en: "Seamless native HTTP requests to read and write third-party web database entries.",
+                            es: "Conexión directa por HTTP para interactuar con bases de datos y servidores web."
+                        },
+                        target: {
+                            it: "Maker e creatori di simulatori fisici 3D o giochi online multiplayer.",
+                            en: "Makers who want to design complex 3D projects connected to real-time live APIs.",
+                            es: "Creadores interactivos interesados en modelado 3D y juegos que consulten servidores."
+                        },
+                        extensions: {
+                            it: "Centinaia di estensioni comunitarie per IA, database, suono ed elettronica.",
+                            en: "Dozens of custom community categories for AI, networking, sound, and robotics.",
+                            es: "Cientos de extensiones comunitarias para IA, base de datos y robótica."
+                        }
+                    },
+                    {
+                        id: "leopard",
+                        name: "Leopard",
+                        creator: "PullJosh",
+                        status: "Active",
+                        category: "performance",
+                        brandColor: "#e11d48",
+                        logoIcon: '<i class="fa-solid fa-paw"></i>',
+                        website: "https://leopardjs.com",
+                        exportJs: true,
+                        webRequests: false,
+                        speedScore: "Native Javascript translation execution speed",
+                        speedPercentage: 100,
+                        descriptions: {
+                            it: "Non è un semplice editor alternativo, ma un traduttore che trasforma i tuoi blocchi Scratch direttamente in codice JavaScript leggibile che utilizza una libreria di rendering ultra-veloce simile a React.",
+                            en: "Translates standard Scratch projects directly into readable, professional-grade JavaScript code using a React-like visual rendering library.",
+                            es: "Traduce proyectos completos de Scratch a código JavaScript legible utilizando una librería de renderizado súper rápida parecida a React."
+                        },
+                        keyFeatures: {
+                            it: ["Traduttore Scratch-JS", "Codice leggibile", "Sviluppo Web reale", "Compatibile al 100%"],
+                            en: ["Scratch-to-JS translator", "Human-readable code", "Pro Web Development", "High Accuracy"],
+                            es: ["Traductor Scratch-a-JS", "Código legible", "Desarrollo profesional", "Alta fidelidad"]
+                        },
+                        highlight: {
+                            it: "Il ponte definitivo tra programmazione visuale a blocchi e sviluppo in JavaScript puro.",
+                            en: "The ultimate stepping stone from blocks to editing raw JavaScript syntax in modern IDEs.",
+                            es: "La pasarela perfecta para migrar de programación visual a código puro JS."
+                        },
+                        target: {
+                            it: "Studenti che vogliono compiere il salto da Scratch allo sviluppo software reale.",
+                            en: "Students transitioning from colorful block scripts to real script development.",
+                            es: "Estudiantes que planean dar el salto definitivo de Scratch a la sintaxis JS."
+                        },
+                        extensions: {
+                            it: "Estendibile direttamente scrivendo righe di codice JavaScript standard.",
+                            en: "Fully expandable by writing standard JS packages inside the output files.",
+                            es: "Completamente extensible mediante la escritura directa de código JS nativo."
+                        }
+                    },
+                    {
+                        id: "beetleblocks",
+                        name: "BeetleBlocks",
+                        creator: "Eric Rosenbaum, Duks Koschitz, Bernat Romagosa",
+                        status: "Preserved",
+                        category: "niche",
+                        brandColor: "#059669",
+                        logoIcon: '<i class="fa-solid fa-cube"></i>',
+                        website: "https://snap.berkeley.edu/beetle",
+                        exportJs: false,
+                        webRequests: false,
+                        speedScore: "Standard 3D design processor",
+                        speedPercentage: 45,
+                        descriptions: {
+                            it: "Un ambiente a blocchi orientato al design tridimensionale e alla stampa 3D (2014-2020). Originariamente autonomo, oggi è preservato e ospitato ufficialmente sul sito di Berkeley come estensione integrata '3D Beetle' per Snap!.",
+                            en: "A block-based environment for 3D design and printing (2014-2020). Originally standalone, it is now officially preserved and hosted on Berkeley's Snap! platform as the built-in '3D Beetle' extension.",
+                            es: "Entorno de bloques dedicado al diseño 3D y la impresión 3D (2014-2020). Originalmente autónomo, hoy en día se preserva y aloja oficialmente en el sitio de Berkeley como la extensión integrada '3D Beetle' en Snap!."
+                        },
+                        keyFeatures: {
+                            it: ["Grafica 3D vettoriale", "Export STL", "Ospitato da Berkeley", "Stampa 3D"],
+                            en: ["3D Vector Graphics", "STL Export", "Berkeley Hosted", "3D Print Friendly"],
+                            es: ["Gráficos 3D vectoriales", "Exportación STL", "Alojado por Berkeley", "Impresión 3D"]
+                        },
+                        highlight: {
+                            it: "Oggi accessibile e mantenuto come estensione integrata sul portale ufficiale di Snap!.",
+                            en: "Fully preserved and actively accessible as an integrated extension within the official Snap! portal.",
+                            es: "Pionero del diseño 3D, mantenido hoy como extensión integrada dentro de la web de Snap!."
+                        },
+                        target: {
+                            it: "Hobbyisti e maker storici interessati alla stampa 3D algoritmica di precisione.",
+                            en: "Historical makers and mechanical hobbyists transitioning to Snap! 3D.",
+                            es: "Creadores históricos interesados en el modelado paramétrico algorítmico en 3D."
+                        },
+                        extensions: {
+                            it: "Esportazione mesh 3D integrata (ora disponibile nella libreria 3D ufficiale di Snap!).",
+                            en: "Built-in 3D mesh rendering and STL exporting (now available inside Snap!'s 3D library).",
+                            es: "Compilación de mallas 3D nativa integrada (ahora disponible en la biblioteca 3D de Snap!)."
+                        }
+                    }
+                ],
+
+                // Helper to get specific mod metrics
+                getMod(id) {
+                    return this.mods.find(m => m.id === id) || this.mods[0];
+                },
+
+                // Filters directory layout logic
+                filteredMods() {
+                    return this.mods.filter(mod => {
+                        const matchesSearch = mod.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                              mod.descriptions[this.lang].toLowerCase().includes(this.searchQuery.toLowerCase());
+                        const matchesCategory = this.filterCategory === 'all' || mod.category === this.filterCategory;
+                        return matchesSearch && matchesCategory;
+                    });
+                },
+
+                // Open selected mod directly inside Compare Tab
+                openCompareWith(id) {
+                    this.comp1 = id;
+                    // Assign second mod from remaining ones
+                    const alternate = this.mods.find(m => m.id !== id);
+                    if (alternate) {
+                        this.comp2 = alternate.id;
+                    }
+                    this.activeTab = 'compare';
+                },
+
+                // Reset Recommendation Wizard
+                resetQuiz() {
+                    this.quizStep = 0;
+                    this.quizAnswers = { goal: '', level: '', integration: '' };
+                    this.recommendedMod = null;
+                },
+
+                // Calculate which Scratch mod fits best based on quiz responses
+                calculateResult() {
+                    const answers = this.quizAnswers;
+                    let candidate = "miciocode"; // Default fallback to our amazing new mod
+
+                    if (answers.goal === 'speed') {
+                        candidate = (answers.integration === 'full') ? 'leopard' : 'turbowarp';
+                    } else if (answers.goal === 'advanced') {
+                        candidate = 'snap';
+                    } else if (answers.goal === 'media') {
+                        candidate = (answers.level === 'standard') ? 'miciocode' : 'penguinmod';
+                    }
+
+                    this.recommendedMod = this.mods.find(m => m.id === candidate) || this.mods[0];
+                    this.quizStep = 3; // Switch to results step
+                },
+
+                // Sandbox Interaction Functions
+                addSandboxBlock(type) {
+                    let blockData = {};
+                    if (type === 'compiler_active') {
+                        blockData = { category: 'turbowarp', text: "IF <compiler: is compiled?> THEN [say 'Running at maximum speed!']", type };
+                    } else if (type === 'limit_remover') {
+                        blockData = { category: 'turbowarp', text: "ENABLE LIMITS: unlimited cloning mode enabled", type };
+                    } else if (type === 'custom_fps') {
+                        blockData = { category: 'turbowarp', text: "SET GRAPHICS FRAME RATE TO (60) FPS", type };
+                    } else if (type === 'snap_map') {
+                        blockData = { category: 'snap', text: "SET [output] TO (map [double] over list (1, 2, 3))", type };
+                    } else if (type === 'snap_lambdas') {
+                        blockData = { category: 'snap', text: "EXECUTE INLINE JS: console.log('Snap code active!')", type };
+                    } else if (type === 'penguin_3d') {
+                        blockData = { category: 'penguinmod', text: "CREATE 3D SCENE & ADD CUBE [size 10] [color Purple]", type };
+                    } else if (type === 'penguin_fetch') {
+                        blockData = { category: 'penguinmod', text: "FETCH JSON FROM URL 'https://api.penguinmod/data'", type };
+                    } else if (type === 'miciocode_banner') {
+                        blockData = { category: 'miciocode', text: "SET CUSTOM PROJECT BANNER TO [Cat Theme]", type };
+                    } else if (type === 'miciocode_ai') {
+                        blockData = { category: 'miciocode', text: "AI: GENERATE SCRIPT FOR [cat jump script] AND INJECT", type };
+                    }
+
+                    this.sandboxScript.push(blockData);
+                },
+
+                removeSandboxBlock(idx) {
+                    this.sandboxScript.splice(idx, 1);
+                },
+
+                clearSandbox() {
+                    this.sandboxScript = [];
+                    this.sandboxExecuted = false;
+                    this.consoleLogs = [];
+                    this.has3D = false;
+                    this.customFPS = false;
+                    this.isCompiled = false;
+                },
+
+                runSandboxScript() {
+                    this.sandboxExecuted = true;
+                    this.consoleLogs = [];
+                    
+                    // Default values
+                    this.has3D = false;
+                    this.customFPS = false;
+                    this.isCompiled = false;
+
+                    if (this.sandboxScript.length === 0) {
+                        this.consoleLogs.push("Error: Workspace is empty. Add blocks from the left panel.");
+                        return;
+                    }
+
+                    // Scan workspace components and generate simulated responses
+                    this.sandboxScript.forEach(block => {
+                        if (block.type === 'compiler_active') {
+                            this.isCompiled = true;
+                            this.consoleLogs.push("Compiler Hook: Native optimized binary initialized. Speed is 25x standard.");
+                        } else if (block.type === 'limit_remover') {
+                            this.consoleLogs.push("Memory Settings: Scratch 300-clones limit has been successfully bypassed.");
+                        } else if (block.type === 'custom_fps') {
+                            this.customFPS = true;
+                            this.customFPSVal = 60;
+                            this.consoleLogs.push("Visual Settings: Target display sync shifted to 60 FPS smoothly.");
+                        } else if (block.type === 'snap_map') {
+                            this.consoleLogs.push("Functional Array: [1, 2, 3] mapped to result -> [2, 4, 6] (Dynamic list computation complete)");
+                        } else if (block.type === 'snap_lambdas') {
+                            this.consoleLogs.push("Inline JS Execution: output text 'Snap code active!' posted to web console.");
+                        } else if (block.type === 'penguin_3d') {
+                            this.has3D = true;
+                            this.consoleLogs.push("Web Graphics API: ThreeJS context allocated. Spinning cube added to camera viewport.");
+                        } else if (block.type === 'penguin_fetch') {
+                            this.consoleLogs.push("Web Request: Fetch complete! GET payload returned code 200, dynamic data loaded.");
+                        } else if (block.type === 'miciocode_banner') {
+                            this.consoleLogs.push("Micio UI: Project profile page banner successfully updated to 'Cat Theme' (Vibrant Coral Graphics).");
+                        } else if (block.type === 'miciocode_ai') {
+                            this.consoleLogs.push("MicioAI: Synthesizing logic prompts... Successfully compiled 'cat jump script' (when Space key pressed -> repeat 10: change y by 10).");
+                        }
+                    });
+                }
+            };
+        }
+    </script>
+</body>
+</html>

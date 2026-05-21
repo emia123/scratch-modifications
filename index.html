@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AllScratchMods</title>
+    <title>AllScratchMods - MicioCode Edition</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for beautiful block and feature icons -->
@@ -137,7 +137,7 @@
             </div>
         </div>
 
-        <!-- Mobile Tabs Navigation Drawer/Bar -->
+        <!-- MOBILE TABS NAVIGATION -->
         <div class="md:hidden flex justify-around bg-slate-100 p-2 border-t border-slate-200">
             <button @click="activeTab = 'directory'" class="flex flex-col items-center flex-1 py-1 text-xs font-semibold" :class="activeTab === 'directory' ? 'text-indigo-600' : 'text-slate-500'">
                 <i class="fa-solid fa-list-ul text-lg mb-0.5"></i>
@@ -577,11 +577,11 @@
 
                             <!-- MicioCode blocks tray -->
                             <div x-show="sandboxMod === 'miciocode'" class="space-y-3" x-transition>
-                                <div @click="addSandboxBlock('miciocode_banner')" class="scratch-block scratch-rose p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                <div @click="addSandboxBlock('miciocode_banner')" class="scratch-block bg-rose-500 p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
                                     <span><span class="bg-rose-700/50 px-1.5 py-0.5 rounded text-[10px] mr-1">Banner</span> set custom project banner to [Cat Theme]</span>
                                     <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
                                 </div>
-                                <div @click="addSandboxBlock('miciocode_ai')" class="scratch-block scratch-rose p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
+                                <div @click="addSandboxBlock('miciocode_ai')" class="scratch-block bg-rose-500 p-3 rounded-xl text-white font-bold text-xs flex items-center justify-between select-none">
                                     <span><span class="bg-rose-700/50 px-1.5 py-0.5 rounded text-[10px] mr-1">AI</span> generate block-code from prompt [cat jump script]</span>
                                     <i class="fa-solid fa-plus text-[10px] opacity-75"></i>
                                 </div>
@@ -621,7 +621,7 @@
                                     'scratch-orange border-amber-500': block.category === 'turbowarp',
                                     'scratch-blue border-blue-600': block.category === 'snap',
                                     'scratch-purple border-purple-600': block.category === 'penguinmod',
-                                    'scratch-rose border-rose-600': block.category === 'miciocode'
+                                    'bg-rose-500 border-rose-600': block.category === 'miciocode'
                                 }">
                                     <span x-text="block.text"></span>
                                     <button @click="removeSandboxBlock(index)" class="text-white/60 hover:text-white group-hover:opacity-100 transition-opacity">
@@ -733,10 +733,10 @@
                 
                 // Compare state variables
                 comp1: 'turbowarp',
-                comp2: 'miciocode',
+                comp2: 'snap',
 
                 // Sandbox play state variables
-                sandboxMod: 'miciocode',
+                sandboxMod: 'turbowarp',
                 sandboxScript: [],
                 sandboxExecuted: false,
                 consoleLogs: [],
@@ -767,7 +767,7 @@
                         all: "Tutte",
                         catPerformance: "Velocità",
                         catAdvanced: "Avanzate",
-                        catMultimedia: "AI, 3D & Multimedia",
+                        catMultimedia: "IA, 3D & Multimedia",
                         compareLabel: "Confronta con un altro Mod",
                         yes: "Sì",
                         no: "No",
@@ -1164,7 +1164,7 @@
                 // Calculate which Scratch mod fits best based on quiz responses
                 calculateResult() {
                     const answers = this.quizAnswers;
-                    let candidate = "miciocode"; // Default fallback to our amazing new mod
+                    let candidate = "turbowarp"; // Default fallback
 
                     if (answers.goal === 'speed') {
                         candidate = (answers.integration === 'full') ? 'leopard' : 'turbowarp';
